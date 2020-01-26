@@ -13,14 +13,16 @@ import (
 
 type counters struct {
 	sync.Mutex
-	view  int
-	click int
+	view  map[string]int
+	click map[string]int
 }
 
 var (
 	c = counters{}
 	lastKey = ""
 	content = []string{"sports", "entertainment", "business", "education"}
+	title = []string{}
+	record = []string{}
 )
 
 func welcomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -31,20 +33,11 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	data := content[rand.Intn(len(content))]
 
 	key := data +  ":" + strconv.Itoa(time.Now().Year()) + "-" + strconv.Itoa(int(time.Now().Month())) + "-" + strconv.Itoa(time.Now().Day()) + "  " + strconv.Itoa(time.Now().Hour()) + ":" +strconv.Itoa(time.Now().Minute())
-	if lastKey == "" {
-		lastKey = key
-	}
-
-
-	if key != lastKey{
-		c.view = 0
-		c.click = 0
-		lastKey = key
-	}
-
+	lastKey = key
 	c.Lock()
-	c.view++
+	c.view[key]++
 	c.Unlock()
+	title = append(title, key)
 
 	err := processRequest(r)
 	if err != nil {
@@ -55,11 +48,12 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 
 	// simulate random click call
 	if rand.Intn(100) < 50 {
-		processClick(data)
+		processClick(key)
 	}
 
 
-	value := "{views:" + strconv.Itoa(c.view) + "clicks:" + strconv.Itoa(c.click) + "}"
+	value := "{views:" + strconv.Itoa(c.view[key]) + "clicks:" + strconv.Itoa(c.click[key]) + "}"
+	record = append(record, value)
 	fmt.Println(key)
 	fmt.Println(value)
 
@@ -72,7 +66,7 @@ func processRequest(r *http.Request) error {
 
 func processClick(data string) error {
 	c.Lock()
-	c.click++
+	c.click[data]++
 	c.Unlock()
 
 	return nil
@@ -93,13 +87,22 @@ func uploadCounters(f *os.File) error {
 	for isAllowed(){
 		time.Sleep(5 * time.Second)
 		//messenge := "{views:" + string(c.view) + "clicks:" + string(c.click) + "}"
-		fmt.Fprintln(f, lastKey)
-		fmt.Fprintln(f, "{views:" , c.view , "clicks:" , c.click , "}")
+		//fmt.Fprintln(f, lastKey)
+		//fmt.Fprintln(f, "{views:" , c.view[lastKey] , "clicks:" , c.click[lastKey] , "}")
+		for i := range title{
+			fmt.Fprintln(f, title[i])
+			fmt.Fprintln(f, record[i])
+		}
+		title = []string{}
+		record = []string{}
 	}
 	return nil
 }
 
 func main() {
+	fmt.Println("the upload function will only upload the data that has not been loaded, that means there will not be any duplicate data in the MockStore.txt file")
+	c.view = make(map[string]int)
+	c.click = make(map[string]int)
 	f, err := os.Create("MockStore.txt")
 	if err != nil {
 		panic(err)
