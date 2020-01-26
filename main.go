@@ -19,7 +19,7 @@ type counters struct {
 
 var (
 	c = counters{}
-
+	lastKey = ""
 	content = []string{"sports", "entertainment", "business", "education"}
 )
 
@@ -29,6 +29,18 @@ func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	data := content[rand.Intn(len(content))]
+
+	key := data +  ":" + strconv.Itoa(time.Now().Year()) + "-" + strconv.Itoa(int(time.Now().Month())) + "-" + strconv.Itoa(time.Now().Day()) + "  " + strconv.Itoa(time.Now().Hour()) + ":" +strconv.Itoa(time.Now().Minute())
+	if lastKey == "" {
+		lastKey = key
+	}
+
+
+	if key != lastKey{
+		c.view = 0
+		c.click = 0
+		lastKey = key
+	}
 
 	c.Lock()
 	c.view++
@@ -46,8 +58,8 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 		processClick(data)
 	}
 
-	key := data +  ":" + time.Now().String()
-	value := "views:" + strconv.Itoa(c.view) + "clicks:" + strconv.Itoa(c.click)
+
+	value := "{views:" + strconv.Itoa(c.view) + "clicks:" + strconv.Itoa(c.click) + "}"
 	fmt.Println(key)
 	fmt.Println(value)
 
@@ -81,7 +93,7 @@ func uploadCounters(f *os.File) error {
 	for isAllowed(){
 		time.Sleep(5 * time.Second)
 		//messenge := "{views:" + string(c.view) + "clicks:" + string(c.click) + "}"
-
+		fmt.Fprintln(f, lastKey)
 		fmt.Fprintln(f, "{views:" , c.view , "clicks:" , c.click , "}")
 	}
 	return nil
