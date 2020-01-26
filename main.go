@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"strconv"
 )
 
 type counters struct {
@@ -45,8 +46,11 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 		processClick(data)
 	}
 
-	fmt.Println("Key:", data, ":", time.Now(), "      ")
-	fmt.Println("Value:{views:", c.view, "clicks:", c.click, "}")
+	key := data +  ":" + time.Now().String()
+	value := "views:" + strconv.Itoa(c.view) + "clicks:" + strconv.Itoa(c.click)
+	fmt.Println(key)
+	fmt.Println(value)
+
 }
 
 func processRequest(r *http.Request) error {
